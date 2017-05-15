@@ -1,8 +1,8 @@
 # Jinx-Depression-Diagnosis
-Self-Diagnosis Tool for Depression
-app code written by Devesh Chaudhari
+<b> Self-Diagnosis Tool for Depression </b>
+<i> app code written by Devesh Chaudhari </i>
 
-Dear users,
+Dear users, <br>
   Our apps are open source so feel free to contribute your idea in our app. 
   You can submit your patch, UI, UX modifications,and other cool features 
   that you would like in our app and we will add it to our final build. 
