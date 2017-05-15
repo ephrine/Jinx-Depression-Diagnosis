@@ -1,5 +1,5 @@
 # Jinx-Depression-Diagnosis
-<b> Self-Diagnosis Tool for Depression </b>
+<b> Self-Diagnosis Tool for Depression </b> <br>
 <i> app code written by Devesh Chaudhari </i>
 
 Dear users, <br>
