@@ -168,7 +168,6 @@ isNetworkAvailable();
             mInterstitialAd = new InterstitialAd(this);
             mInterstitialAd.setAdUnitId(getString(R.string.intadd));
 
-            //mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
             mInterstitialAd.setAdListener(new AdListener() {
                 @Override
                 public void onAdClosed() {
@@ -2630,8 +2629,6 @@ isNetworkAvailable();
             //  MobileAds.initialize(getApplicationContext(), getString(R.string.admob_app_id));
 
             NativeExpressAdView adView = (NativeExpressAdView) findViewById(R.id.adViewN);
-//adView.setAdUnitId("ca-app-pub-6702661245453687/6410665853");
-//adView.setAdSize(com.google.android.gms.ads.AdSize.BANNER);
             AdRequest request = new AdRequest.Builder()
                     .build();
             adView.loadAd(request);
