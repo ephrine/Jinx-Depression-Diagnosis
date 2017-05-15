@@ -9,3 +9,6 @@ Dear users,
   You are allowed to modify source code for contribution in our open source
   community but keep in mind that you are not allowed to Distribution of our apps in
   app stores, websites or by any other means without our approval.
+  
+  
+  <a href='https://play.google.com/store/apps/details?id=devesh.ephrine.depression.self.diagnosis&pcampaignid=MKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png'/></a>
