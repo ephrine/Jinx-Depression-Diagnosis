@@ -2,12 +2,6 @@ apply plugin: 'com.android.application'
 
 android {
     signingConfigs {
-        release {
-            keyAlias 'devandroidkey'
-            keyPassword 'deveshcc'
-            storeFile file('D:/Android_Development/key')
-            storePassword 'deveshcc'
-        }
     }
     compileSdkVersion 25
     buildToolsVersion "25.0.2"
@@ -30,7 +24,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+        //    signingConfig signingConfigs.release
            //   debuggable true
         }
         debug {
