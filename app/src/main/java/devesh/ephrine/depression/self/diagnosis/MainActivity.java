@@ -24,6 +24,7 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.Profile;
@@ -33,7 +34,6 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.NativeExpressAdView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
@@ -90,6 +90,15 @@ public class MainActivity extends AppCompatActivity {
     int L = 2;
     int T;
     private AdView mAdView;
+
+
+    public CallbackManager mCallbackManager;
+    public String UserFname;
+    public String UserLname;
+    public String UserEmailID;
+    private FirebaseAuth mAuth;
+    private FirebaseAuth.AuthStateListener mAuthListener;
+
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
@@ -136,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 isNetworkAvailable();
         isAppInstalled("devesh.ephrine.depression.self.diagnosis.pro");
+        mAuth = FirebaseAuth.getInstance();
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -153,7 +163,7 @@ isNetworkAvailable();
         l1.startAnimation(animation1);
         l2.startAnimation(animation1);
 
-        if (installed == true) {
+        if(installed) {
 
         } else {
 
@@ -168,6 +178,7 @@ isNetworkAvailable();
             mInterstitialAd = new InterstitialAd(this);
             mInterstitialAd.setAdUnitId(getString(R.string.intadd));
 
+            //mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
             mInterstitialAd.setAdListener(new AdListener() {
                 @Override
                 public void onAdClosed() {
@@ -189,16 +200,114 @@ isNetworkAvailable();
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        // Check if user is signed in (non-null) and update UI accordingly.
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+
+        uid=currentUser.getUid();
+
+        GraphRequest request = GraphRequest.newMeRequest(
+                AccessToken.getCurrentAccessToken(),
+                new GraphRequest.GraphJSONObjectCallback() {
+                    @Override
+                    public void onCompleted(JSONObject object, GraphResponse response) {
+                        Log.v("LoginActivity", response.toString());
+                        try {
+
+                            String email = object.getString("email");
+                            UserEmailID = email;
+
+                            String UserGender = object.getString("gender");
+
+                            String FBlink = object.getString("link");
+
+                            String FBFname = object.getString("first_name");
+                            UserFname = FBFname;
+
+                            String FBLname = object.getString("last_name");
+                            UserLname = FBLname;
+
+                            //  FBDOB = object.getString("birthday"); // 01/31/1980 format
+
+                            Log.d("FB Email", email);
+                            Log.d("FB Gender", UserGender);
+                            Log.d("FB link", FBlink);
+                            Log.d("FB name", FBFname + " " + FBLname);
+
+                            //  Log.d("FB DOB", FBDOB);
+                            // emailid.setText(email);
+
+
+                        } catch (JSONException e) {
+                            Log.e("MYAPP", "unexpected JSON exception", e);
+                            // Do something to recover ... or kill the app.
+                        }
+
+                    }
+                });
+
+        Bundle parameters = new Bundle();
+        parameters.putString("fields", "first_name,last_name,id,name,email,gender,link");
+        request.setParameters(parameters);
+        request.executeAsync();
+
+        Profile profile = Profile.getCurrentProfile();
+        System.out.println(profile.getFirstName());
+        //System.out.println(profile.getId());
+        Log.d("Jinx: FB id", profile.getId());
+
+        FirebaseDatabase database1 = FirebaseDatabase.getInstance();
+
+        //First Name
+        DatabaseReference Fname = database1.getReference("users/" + uid + "/FirstName");
+        Fname.setValue(UserFname);
+
+        //Last Name
+        DatabaseReference Lname = database1.getReference("users/" + uid + "/LastName");
+        Lname.setValue(UserLname);
+
+        //Email ID
+        DatabaseReference emailID = database1.getReference("users/" + uid + "/emailID");
+        emailID.setValue(UserEmailID);
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+  /*      user.updateEmail(UserEmailID)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                        }
+                    }
+                });
+*/
+
+        DatabaseReference newuser = database1.getReference("users/" + uid + "/new");
+        newuser.setValue("1");
+
+
+
+
+    }
+    @Override
+    public void onStop() {
+        super.onStop();
+    //    if (mAuthListener != null) {
+      //      mAuth.removeAuthStateListener(mAuthListener);
+        //}
+    }
+
+    @Override
     public void onBackPressed() {
 
-        if (installed == false) {
+        if (!installed) {
             if (mInterstitialAd.isLoaded()) {
                 mInterstitialAd.show();
             } else {
                 finish();
             }
 
-        } else if (installed == true) {
+        } else if (installed) {
             finish();
         } else {
             setContentView(R.layout.activity_pay);
@@ -305,13 +414,14 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
                     Total = value;
                     T = Integer.parseInt(Total.toString());
 
                     GetTotalArrange();
-                    Log.d("Jinx", "Value is: " + value);
+
                 }
             }
 
@@ -397,15 +507,20 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
 
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore12);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
                     graph1 = Integer.parseInt(value.toString());
                     GraphDraw();
+                }else {
+
+                    View loading=(View)findViewById(R.id.loading);
+                    loading.setVisibility(View.GONE);
+
                 }
 
             }
@@ -425,9 +540,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate11);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -449,8 +564,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus13);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -474,9 +590,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore22);
                     Tx.setText(value);
                     graph2 = Integer.parseInt(value.toString());
@@ -501,9 +617,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate21);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -525,8 +641,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus23);
                     Tx.setText(value);
                     Tx.setSelected(true);
@@ -552,8 +669,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore32);
                     Tx.setText(value);
                     graph3 = Integer.parseInt(value.toString());
@@ -577,8 +696,11 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate31);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -600,8 +722,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value1 = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value1);
+
                 if (value1 != null) {
-                    Log.d("Jinx", "Value is: " + value1);
                     TextView Tx1 = (TextView) findViewById(R.id.TextViewStatus33x);
                     Tx1.setText(value1);
                     Tx1.setVisibility(View.VISIBLE);
@@ -626,8 +749,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore42);
                     Tx.setText(value);
                     graph4 = Integer.parseInt(value.toString());
@@ -652,8 +776,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate41);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -675,8 +801,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus43);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -700,9 +828,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore52);
                     Tx.setText(value);
                     graph5 = Integer.parseInt(value.toString());
@@ -727,9 +856,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate51);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -751,9 +880,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus53);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -778,9 +907,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore62);
                     Tx.setText(value);
                     graph6 = Integer.parseInt(value.toString());
@@ -804,9 +933,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate61);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -828,8 +958,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus63);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -854,8 +985,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore72);
                     Tx.setText(value);
                     graph7 = Integer.parseInt(value.toString());
@@ -879,8 +1011,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate71);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -902,8 +1035,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus73);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -928,8 +1062,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore82);
                     Tx.setText(value);
                     graph8 = Integer.parseInt(value.toString());
@@ -954,9 +1089,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
 
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate81);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -978,8 +1113,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus83);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1004,8 +1140,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore92);
                     Tx.setText(value);
                     graph9 = Integer.parseInt(value.toString());
@@ -1030,8 +1167,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate91);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1053,8 +1191,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus93);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1079,8 +1218,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore10_2);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1104,8 +1244,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate10_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1128,8 +1270,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus10_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1154,8 +1298,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore11_2);
                     Tx.setText(value);
                     graph11 = Integer.parseInt(value.toString());
@@ -1179,8 +1325,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate11_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1202,8 +1350,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus11_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1227,8 +1377,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore12_2);
                     Tx.setText(value);
                     graph12 = Integer.parseInt(value.toString());
@@ -1252,8 +1404,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate12_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1275,8 +1429,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus12_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1301,8 +1457,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore13_2);
                     Tx.setText(value);
                     graph13 = Integer.parseInt(value.toString());
@@ -1326,8 +1484,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate13_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1349,8 +1509,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus13_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1375,8 +1537,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore14_2);
                     Tx.setText(value);
                     graph14 = Integer.parseInt(value.toString());
@@ -1400,8 +1564,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate14_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1423,8 +1589,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus14_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1448,8 +1616,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore15_2);
                     Tx.setText(value);
                     graph15 = Integer.parseInt(value.toString());
@@ -1473,8 +1643,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate15_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1496,8 +1668,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus15_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1522,8 +1696,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore16_2);
                     Tx.setText(value);
                     graph16 = Integer.parseInt(value.toString());
@@ -1547,8 +1723,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate16_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1570,8 +1748,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus16_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1596,8 +1776,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore17_2);
                     Tx.setText(value);
                     graph17 = Integer.parseInt(value.toString());
@@ -1621,8 +1803,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate17_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1644,8 +1828,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus17_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1669,8 +1855,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore18_2);
                     Tx.setText(value);
                     graph18 = Integer.parseInt(value.toString());
@@ -1694,8 +1882,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate18_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1717,8 +1907,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus18_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1743,8 +1935,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore19_2);
                     Tx.setText(value);
                     graph19 = Integer.parseInt(value.toString());
@@ -1768,8 +1962,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate19_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1791,8 +1987,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus19_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1817,8 +2015,10 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore20_2);
                     Tx.setText(value);
                     graph20 = Integer.parseInt(value.toString());
@@ -1842,9 +2042,12 @@ isNetworkAvailable();
             public void onDataChange(DataSnapshot dataSnapshot) {
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
+
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
+
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate20_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1866,8 +2069,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus20_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1891,8 +2095,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore21_2);
                     Tx.setText(value);
                     graph21 = Integer.parseInt(value.toString());
@@ -1916,8 +2121,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate21_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1939,8 +2145,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus21_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -1965,8 +2172,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore22_2);
                     Tx.setText(value);
                     graph22 = Integer.parseInt(value.toString());
@@ -1990,8 +2198,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate22_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2013,8 +2222,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus22_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2039,8 +2249,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore23_2);
                     Tx.setText(value);
                     graph23 = Integer.parseInt(value.toString());
@@ -2064,8 +2275,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate23_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2087,8 +2299,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus23_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2113,8 +2326,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore24_2);
                     Tx.setText(value);
                     graph24 = Integer.parseInt(value.toString());
@@ -2138,8 +2352,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate24_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2161,8 +2376,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus24_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2186,8 +2402,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore25_2);
                     Tx.setText(value);
                     graph25 = Integer.parseInt(value.toString());
@@ -2212,8 +2429,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate25_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2235,8 +2453,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus25_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2261,8 +2480,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore26_2);
                     Tx.setText(value);
                     graph26 = Integer.parseInt(value.toString());
@@ -2286,8 +2506,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate26_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2309,8 +2530,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus26_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2335,8 +2557,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewScore27_2);
                     Tx.setText(value);
                     graph27 = Integer.parseInt(value.toString());
@@ -2360,8 +2583,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewDate27_1);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2383,8 +2607,9 @@ isNetworkAvailable();
                 // This method is called once with the initial value and again
                 // whenever data at this location is updated.
                 String value = dataSnapshot.getValue(String.class);
+                Log.d("Jinx", "Value is: " + value);
                 if (value != null) {
-                    Log.d("Jinx", "Value is: " + value);
+
                     TextView Tx = (TextView) findViewById(R.id.TextViewStatus27_3);
                     Tx.setText(value);
                     Tx.setVisibility(View.VISIBLE);
@@ -2621,17 +2846,16 @@ isNetworkAvailable();
     public void FbAds() {
 
 
-        if (installed == true) {
+        if (installed) {
             LinearLayout LLAd = (LinearLayout) findViewById(R.id.LLAdview);
             LLAd.setVisibility(View.GONE);
 
         } else {
-            //  MobileAds.initialize(getApplicationContext(), getString(R.string.admob_app_id));
+              MobileAds.initialize(getApplicationContext(), getString(R.string.admob_app_id));
 
-            NativeExpressAdView adView = (NativeExpressAdView) findViewById(R.id.adViewN);
-            AdRequest request = new AdRequest.Builder()
-                    .build();
-            adView.loadAd(request);
+            mAdView = (AdView) findViewById(R.id.adView2);
+            AdRequest adRequest = new AdRequest.Builder().build();
+            mAdView.loadAd(adRequest);
         }
 
 

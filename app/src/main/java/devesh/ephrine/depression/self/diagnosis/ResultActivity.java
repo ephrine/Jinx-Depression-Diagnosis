@@ -142,6 +142,10 @@ public class ResultActivity extends AppCompatActivity {
                 // whenever data at this location is updated.
                 String tot = dataSnapshot.getValue(String.class);
                 Log.d("Jinx ", "Value is: " + tot);
+
+                if(tot==null || tot.equals(null) || tot.equals("null") || tot=="null"){
+                    tot="1";
+                }
                 FirebaseDatabase database1 = FirebaseDatabase.getInstance();
 
                 //Score

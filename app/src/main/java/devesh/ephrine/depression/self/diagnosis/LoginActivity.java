@@ -2,9 +2,13 @@ package devesh.ephrine.depression.self.diagnosis;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -38,6 +42,9 @@ import com.google.firebase.database.ValueEventListener;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class LoginActivity extends Activity {
     public CallbackManager mCallbackManager;
     public String uid;
@@ -53,7 +60,7 @@ public class LoginActivity extends Activity {
         FacebookSdk.sdkInitialize(getApplicationContext());
         AppEventsLogger.activateApp(this);
         setContentView(R.layout.activity_login);
-
+//printKeyHash();
 
         mAuth = FirebaseAuth.getInstance();
         mAuthListener = new FirebaseAuth.AuthStateListener() {
@@ -62,7 +69,10 @@ public class LoginActivity extends Activity {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
 
-
+             //       Intent i = new Intent(getBaseContext(), MainActivity.class);
+               //     startActivity(i);
+                    // Remove activity
+                 //   finish();
                     // User is signed in
                     Log.d("Jinx", "onAuthStateChanged:signed_in:" + user.getUid());
                 } else {
@@ -300,6 +310,27 @@ public class LoginActivity extends Activity {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(Uri.parse("https://ephrine.blogspot.com/p/privacy-policy.html")); //Google play store
         startActivity(intent);
+    }
+
+    private void printKeyHash(){
+        // Add code to print out the key hash
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(
+                    "devesh.ephrine.depression.self.diagnosis",
+                    PackageManager.GET_SIGNATURES);
+            for (Signature signature : info.signatures) {
+                MessageDigest md = MessageDigest.getInstance("SHA");
+                md.update(signature.toByteArray());
+                Log.d("--------------------", "----------");
+                Log.d("KeyHash FB 1:---", Base64.encodeToString(md.digest(), Base64.DEFAULT));
+                Log.d("--------------------", "----------");
+
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.d("KeyHash FB 2:", e.toString());
+        } catch (NoSuchAlgorithmException e) {
+            Log.d("KeyHash FB 3:", e.toString());
+        }
     }
 
 }
