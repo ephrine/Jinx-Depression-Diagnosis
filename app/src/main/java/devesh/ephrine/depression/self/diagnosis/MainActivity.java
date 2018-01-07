@@ -7,16 +7,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -99,50 +95,11 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
 
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
-
-
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case R.id.navigation_home:
-                    HomeView = (View) findViewById(R.id.HomeView);
-                    HomeView.setVisibility(View.VISIBLE);
-
-                    HistoryView = (View) findViewById(R.id.HistoryView);
-                    HistoryView.setVisibility(View.INVISIBLE);
-
-                    return true;
-                case R.id.navigation_dashboard:
-
-                    HomeView = (View) findViewById(R.id.HomeView);
-                    HomeView.setVisibility(View.INVISIBLE);
-
-                    HistoryView = (View) findViewById(R.id.HistoryView);
-                    HistoryView.setVisibility(View.VISIBLE);
-                    GetTotal();
-                    BlankGraph();
-                    GetProfile();
-                    if(NetCheck.equals("y")){
-                        Toast.makeText(MainActivity.this, "Downloading Data... Please Wait", Toast.LENGTH_LONG).show();
-
-                    }
-                    FbAds();
-                    isNetworkAvailable();
-                    return true;
-
-            }
-            return false;
-        }
-
-    };
-    private AdView adView;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.layout_home);
 isNetworkAvailable();
         isAppInstalled("devesh.ephrine.depression.self.diagnosis.pro");
         mAuth = FirebaseAuth.getInstance();
@@ -153,15 +110,6 @@ isNetworkAvailable();
             uid = user.getUid();
         }
 
-        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-
-        //-----------
-        LinearLayout l1 = (LinearLayout) findViewById(R.id.l1);
-        LinearLayout l2 = (LinearLayout) findViewById(R.id.l2);
-        Animation animation1 = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.home);
-        l1.startAnimation(animation1);
-        l2.startAnimation(animation1);
 
         if(installed) {
 
@@ -179,16 +127,58 @@ isNetworkAvailable();
             mInterstitialAd.setAdUnitId(getString(R.string.intadd));
 
             //mInterstitialAd.setAdUnitId("ca-app-pub-3940256099942544/1033173712");
-            mInterstitialAd.setAdListener(new AdListener() {
+  /*          mInterstitialAd.setAdListener(new AdListener() {
                 @Override
                 public void onAdClosed() {
                     requestNewInterstitial();
                     finish();
                 }
             });
+*/
+            mInterstitialAd.setAdListener(new AdListener() {
+                @Override
+                public void onAdLoaded() {
+                    // Code to be executed when an ad finishes loading.
+                }
 
+                @Override
+                public void onAdFailedToLoad(int errorCode) {
+                    // Code to be executed when an ad request fails.
+                }
+
+                @Override
+                public void onAdOpened() {
+                    // Code to be executed when the ad is displayed.
+                }
+
+                @Override
+                public void onAdLeftApplication() {
+                    // Code to be executed when the user has left the app.
+                    finish();
+
+                }
+
+                @Override
+                public void onAdClosed() {
+                    // Code to be executed when when the interstitial ad is closed.
+                    finish();
+
+                }
+            });
             requestNewInterstitial();
         }
+
+
+        /// Load Histroy
+
+        GetTotal();
+        BlankGraph();
+        GetProfile();
+        if(NetCheck.equals("y")){
+     //       Toast.makeText(MainActivity.this, "Downloading Data... Please Wait", Toast.LENGTH_SHORT).show();
+
+        }
+        isNetworkAvailable();
 
     }
 
@@ -206,84 +196,80 @@ isNetworkAvailable();
         FirebaseUser currentUser = mAuth.getCurrentUser();
 
         uid=currentUser.getUid();
+if(isNetworkAvailable()){
+    GraphRequest request = GraphRequest.newMeRequest(
+            AccessToken.getCurrentAccessToken(),
+            new GraphRequest.GraphJSONObjectCallback() {
+                @Override
+                public void onCompleted(JSONObject object, GraphResponse response) {
+                    Log.v("LoginActivity", response.toString());
+                    try {
 
-        GraphRequest request = GraphRequest.newMeRequest(
-                AccessToken.getCurrentAccessToken(),
-                new GraphRequest.GraphJSONObjectCallback() {
-                    @Override
-                    public void onCompleted(JSONObject object, GraphResponse response) {
-                        Log.v("LoginActivity", response.toString());
-                        try {
+                        String email = object.getString("email");
+                        UserEmailID = email;
 
-                            String email = object.getString("email");
-                            UserEmailID = email;
+                        String UserGender = object.getString("gender");
 
-                            String UserGender = object.getString("gender");
+                        String FBlink = object.getString("link");
 
-                            String FBlink = object.getString("link");
+                        String FBFname = object.getString("first_name");
+                        UserFname = FBFname;
 
-                            String FBFname = object.getString("first_name");
-                            UserFname = FBFname;
+                        String FBLname = object.getString("last_name");
+                        UserLname = FBLname;
 
-                            String FBLname = object.getString("last_name");
-                            UserLname = FBLname;
+                        //  FBDOB = object.getString("birthday"); // 01/31/1980 format
 
-                            //  FBDOB = object.getString("birthday"); // 01/31/1980 format
+                        Log.d("FB Email", email);
+                        Log.d("FB Gender", UserGender);
+                        Log.d("FB link", FBlink);
+                        Log.d("FB name", FBFname + " " + FBLname);
 
-                            Log.d("FB Email", email);
-                            Log.d("FB Gender", UserGender);
-                            Log.d("FB link", FBlink);
-                            Log.d("FB name", FBFname + " " + FBLname);
-
-                            //  Log.d("FB DOB", FBDOB);
-                            // emailid.setText(email);
+                        //  Log.d("FB DOB", FBDOB);
+                        // emailid.setText(email);
 
 
-                        } catch (JSONException e) {
-                            Log.e("MYAPP", "unexpected JSON exception", e);
-                            // Do something to recover ... or kill the app.
-                        }
-
+                    } catch (JSONException e) {
+                        Log.e("MYAPP", "unexpected JSON exception", e);
+                        // Do something to recover ... or kill the app.
                     }
-                });
 
-        Bundle parameters = new Bundle();
-        parameters.putString("fields", "first_name,last_name,id,name,email,gender,link");
-        request.setParameters(parameters);
-        request.executeAsync();
+                }
+            });
 
-        Profile profile = Profile.getCurrentProfile();
-        System.out.println(profile.getFirstName());
-        //System.out.println(profile.getId());
-        Log.d("Jinx: FB id", profile.getId());
+    Bundle parameters = new Bundle();
+    parameters.putString("fields", "first_name,last_name,id,name,email,gender,link");
+    request.setParameters(parameters);
+    request.executeAsync();
 
-        FirebaseDatabase database1 = FirebaseDatabase.getInstance();
+    Profile profile = Profile.getCurrentProfile();
+    System.out.println(profile.getFirstName());
+    //System.out.println(profile.getId());
+    Log.d("Jinx: FB id", profile.getId());
 
-        //First Name
-        DatabaseReference Fname = database1.getReference("users/" + uid + "/FirstName");
-        Fname.setValue(UserFname);
+    FirebaseDatabase database1 = FirebaseDatabase.getInstance();
 
-        //Last Name
-        DatabaseReference Lname = database1.getReference("users/" + uid + "/LastName");
-        Lname.setValue(UserLname);
+    //First Name
+    DatabaseReference Fname = database1.getReference("users/" + uid + "/FirstName");
+    Fname.setValue(UserFname);
 
-        //Email ID
-        DatabaseReference emailID = database1.getReference("users/" + uid + "/emailID");
-        emailID.setValue(UserEmailID);
+    //Last Name
+    DatabaseReference Lname = database1.getReference("users/" + uid + "/LastName");
+    Lname.setValue(UserLname);
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-  /*      user.updateEmail(UserEmailID)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                        }
-                    }
-                });
-*/
+    //Email ID
+    DatabaseReference emailID = database1.getReference("users/" + uid + "/emailID");
+    emailID.setValue(UserEmailID);
 
-        DatabaseReference newuser = database1.getReference("users/" + uid + "/new");
-        newuser.setValue("1");
+
+    DatabaseReference newuser = database1.getReference("users/" + uid + "/new");
+    newuser.setValue("1");
+
+}else {
+    Log.d("Jinx: FB id", "No Internet :( ");
+
+
+}
 
 
 
@@ -340,7 +326,7 @@ isNetworkAvailable();
     public boolean onCreateOptionsMenu(Menu menu) {
         //    Inflate the menu items for use in the action bar
 
-        if (installed == true) {
+        if (installed) {
             MenuInflater inflater = getMenuInflater();
             inflater.inflate(R.menu.menupro, menu);
 
@@ -374,7 +360,7 @@ isNetworkAvailable();
             case R.id.share:
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, "Friends!!! Check out a Awesome app to self diagnose depression. Download Jinx for FREE @ https://play.google.com/store/apps/details?id=devesh.ephrine.depression.self.diagnosis");
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "App to self diagnose depression. Download Jinx for FREE @ https://play.google.com/store/apps/details?id=devesh.ephrine.depression.self.diagnosis");
                 sendIntent.setType("text/plain");
                 startActivity(sendIntent);
                 break;
@@ -518,7 +504,7 @@ isNetworkAvailable();
                     GraphDraw();
                 }else {
 
-                    View loading=(View)findViewById(R.id.loading);
+                    LinearLayout loading=(LinearLayout) findViewById(R.id.LLLoadingView);
                     loading.setVisibility(View.GONE);
 
                 }
@@ -2690,8 +2676,8 @@ isNetworkAvailable();
             // L = 0;
             Log.d("Jinx: L 1:", String.valueOf(L));
 
-            View loading=(View)findViewById(R.id.loading);
-            loading.setVisibility(View.GONE);
+           LinearLayout loading=(LinearLayout) findViewById(R.id.LLLoadingView);
+          loading.setVisibility(View.GONE);
 
         } else {
             L = L + 1;
@@ -2841,24 +2827,6 @@ isNetworkAvailable();
         finish();
         Intent intent = new Intent(this, SplashActivity.class);
         startActivity(intent);
-    }
-
-    public void FbAds() {
-
-
-        if (installed) {
-            LinearLayout LLAd = (LinearLayout) findViewById(R.id.LLAdview);
-            LLAd.setVisibility(View.GONE);
-
-        } else {
-              MobileAds.initialize(getApplicationContext(), getString(R.string.admob_app_id));
-
-            mAdView = (AdView) findViewById(R.id.adView2);
-            AdRequest adRequest = new AdRequest.Builder().build();
-            mAdView.loadAd(adRequest);
-        }
-
-
     }
 
 

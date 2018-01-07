@@ -3,10 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="devesh.ephrine.depression.self.diagnosis.pro.PayActivity">
+    tools:context="devesh.ephrine.depression.self.diagnosis.PayActivity">
 
     <include
-        layout="@layout/activity_main"
+        layout="@layout/layout_home"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
