@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Jinx</string>
+    <string name="appversion">Version: 1.4.0</string>
+
+    <string name="title_activity_result">ResultActivity</string>
+    <string name="action_settings">Settings</string>
+    <string name="ab">Jinx is a simple tool developed to evaluate mental state of person based on mood and anhedonia(loss of or little interest in enjoying pleasurable activities) over the past 2 weeks \n Jinx use Patient Health Questionnaire-9(PHQ-9) which is developed by Drs Robert L Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute of PHQ-9. </string>
+
+</resources>

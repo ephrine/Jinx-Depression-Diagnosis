@@ -1,0 +1,21 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="devesh.ephrine.depression.self.diagnosis.pro.ResultActivity">
+
+    <item
+        android:id="@+id/set"
+        android:icon="@drawable/set"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="always" />
+
+
+    <item
+        android:id="@+id/share"
+        android:icon="@drawable/share"
+        android:orderInCategory="200"
+        android:title="@string/action_settings"
+        app:showAsAction="always" />
+
+</menu>

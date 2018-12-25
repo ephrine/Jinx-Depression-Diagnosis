@@ -48,3 +48,5 @@ Temporary Items
 
 # Ignore beta
 Beta-Release
+Jinx/app/src/main/res/values/SecureStrings.xml
+Jinx/app/google-services.json
